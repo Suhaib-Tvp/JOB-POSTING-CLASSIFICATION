@@ -1,15 +1,10 @@
-# app.py
-
+import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import KMeans
-import joblib
-import os
 
-def scrape_karkidi_jobs(keywords=["data science", "data analyst"], pages=1):
+def scrape_karkidi_jobs(keywords=["data science"], pages=1):
     headers = {'User-Agent': 'Mozilla/5.0'}
     base_url = "https://www.karkidi.com/Find-Jobs/{page}/all/India?search={query}"
     jobs_list = []
@@ -19,45 +14,46 @@ def scrape_karkidi_jobs(keywords=["data science", "data analyst"], pages=1):
             url = base_url.format(page=page, query=keyword.replace(' ', '%20'))
             response = requests.get(url, headers=headers)
             soup = BeautifulSoup(response.content, "html.parser")
+
             job_blocks = soup.find_all("div", class_="ads-details")
             for job in job_blocks:
                 try:
                     title = job.find("h4").get_text(strip=True)
                     company = job.find("a", href=lambda x: x and "Employer-Profile" in x).get_text(strip=True)
-                    location = job.find("p").get_text(strip=True)
-                    experience = job.find("p", class_="emp-exp").get_text(strip=True)
-                    key_skills_tag = job.find("span", string="Key Skills")
-                    skills = key_skills_tag.find_next("p").get_text(strip=True) if key_skills_tag else ""
+                    location = job.find("small", class_="text-muted").get_text(strip=True)
+                    date_posted = job.find("span", class_="date").get_text(strip=True)
+                    link = "https://www.karkidi.com" + job.find("a", href=True)["href"]
                     jobs_list.append({
-                        "Keyword": keyword,
                         "Title": title,
                         "Company": company,
                         "Location": location,
-                        "Experience": experience,
-                        "Skills": skills
+                        "Date Posted": date_posted,
+                        "Link": link
                     })
                 except Exception:
                     continue
-            time.sleep(1)
+            time.sleep(1)  # Be nice to the server
+
     return pd.DataFrame(jobs_list)
 
-def train_and_save_model(df, n_clusters=3, model_path='kmeans_model.pkl', vectorizer_path='vectorizer.pkl'):
-    tfidf = TfidfVectorizer(stop_words='english')
-    skill_matrix = tfidf.fit_transform(df['Skills'].fillna(''))
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-    kmeans.fit(skill_matrix)
-    joblib.dump(kmeans, model_path)
-    joblib.dump(tfidf, vectorizer_path)
-    return kmeans, tfidf
+# Streamlit App
+st.title("Karkidi Job Scraper")
 
-def load_models(model_path='kmeans_model.pkl', vectorizer_path='vectorizer.pkl'):
-    if not os.path.exists(model_path) or not os.path.exists(vectorizer_path):
-        return None, None
-    model = joblib.load(model_path)
-    vectorizer = joblib.load(vectorizer_path)
-    return model, vectorizer
+keywords_input = st.text_input("Enter job keywords (comma-separated):", "data science, data analyst")
+pages = st.slider("Number of pages to scrape per keyword:", 1, 5, 1)
 
-def predict_job_cluster(skills_text, model, tfidf_vec):
-    features = tfidf_vec.transform([skills_text])
-    predicted_label = model.predict(features)
-    return predicted_label[0]
+if st.button("Scrape Jobs"):
+    with st.spinner("Scraping in progress..."):
+        keywords = [kw.strip() for kw in keywords_input.split(",")]
+        results_df = scrape_karkidi_jobs(keywords, pages)
+        st.success(f"Scraped {len(results_df)} job listings.")
+        st.dataframe(results_df)
+
+        # Download link
+        csv = results_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download CSV",
+            data=csv,
+            file_name='karkidi_jobs.csv',
+            mime='text/csv',
+        )
