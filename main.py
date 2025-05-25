@@ -1,27 +1,37 @@
 # main.py
 
+import streamlit as st
+import pandas as pd
 from app import (
     scrape_karkidi_jobs,
-    assign_clusters_to_jobs,
-    persist_models,
+    train_and_save_model,
     load_models,
     predict_job_cluster
 )
 
-if __name__ == "__main__":
-    # 1. Scrape jobs (set pages=2 for quick test, increase as needed)
-    df_jobs = scrape_karkidi_jobs(pages=2)
-    print("Sample scraped jobs:")
-    print(df_jobs.head())
+st.title("Job Posting Cluster Predictor")
+st.write("Enter your skills (comma separated) to predict the job cluster.")
 
-    # 2. Cluster jobs and save models
-    clustered_jobs, model_used, tfidf_used = assign_clusters_to_jobs(df_jobs)
-    print("Clustered jobs sample:")
-    print(clustered_jobs.head())
-    persist_models(model_used, tfidf_used)
+# Try to load models
+model, vectorizer = load_models()
 
-    # 3. Predict cluster for a new skills input
-    model, vectorizer = load_models()
-    sample_skills = "AWS, Python, Data Science, Machine Learning"
-    cluster = predict_job_cluster(sample_skills, model, vectorizer)
-    print(f"Predicted cluster for '{sample_skills}': {cluster}")
+if model is None or vectorizer is None:
+    st.info("Training model for the first time. This may take a minute...")
+    df = scrape_karkidi_jobs(pages=1)
+    if df.empty:
+        st.error("Failed to scrape job data. Please try again later.")
+        st.stop()
+    model, vectorizer = train_and_save_model(df)
+    st.success("Model trained and saved!")
+
+skills = st.text_input("Enter skills (e.g., Python, SQL, Machine Learning):")
+
+if skills:
+    try:
+        cluster = predict_job_cluster(skills, model, vectorizer)
+        st.success(f"Predicted Cluster: {cluster}")
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+
+st.markdown("---")
+st.caption("Demo app. Clustering is based on scraped job skills and may be approximate.")
