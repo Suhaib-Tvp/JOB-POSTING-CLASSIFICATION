@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 import time
 import joblib
+from bs4 import BeautifulSoup
 from sklearn.preprocessing import normalize
 
 def scrape_karkidi_jobs(keywords=["data science"], pages=1):
@@ -61,14 +61,14 @@ def classify_new_jobs(df, model, vectorizer):
 
 st.set_page_config(page_title="Job Notifier", layout="wide")
 st.title("JOB NOTIFIER")
-st.markdown("Automatically cluster and filter new job postings based on your skill preferences.")
+st.markdown("Automatically cluster and filter new job postings based on the skill preferences.")
 
 with st.sidebar:
-    st.header("WHAT ARE YOUR PREFERENCE")
+    st.header("WHAT ARE YOUR PREFERENCES")
     keyword = st.text_input("Enter job keyword", value="data science")
     pages = st.slider("Pages to scrape", min_value=1, max_value=3, value=1)
     user_clusters = st.multiselect("Select preferred clusters", options=[0, 1, 2, 3, 4], default=[0, 1])
-    run_button = st.button("🔍 Fetch & Classify Jobs")
+    run_button = st.button("🔍 Fetch & Classify the Jobs")
 
 
 if run_button:
@@ -76,7 +76,7 @@ if run_button:
         jobs_df = scrape_karkidi_jobs(keywords=[keyword], pages=pages)
 
     if jobs_df.empty:
-        st.warning("⚠️ No job postings found for the given keyword.")
+        st.warning(" No job postings found for the given keyword.")
     else:
         with st.spinner("🔍 Classifying jobs into clusters..."):
             model, vectorizer = load_models()
