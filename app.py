@@ -6,6 +6,7 @@ import joblib
 from bs4 import BeautifulSoup
 from sklearn.preprocessing import normalize
 
+
 def scrape_karkidi_jobs(keywords=["data science"], pages=1):
     headers = {'User-Agent': 'Mozilla/5.0'}
     base_url = "https://www.karkidi.com/Find-Jobs/{page}/all/India?search={query}"
