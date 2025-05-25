@@ -6,7 +6,6 @@ import time
 import joblib
 from sklearn.preprocessing import normalize
 
-# -------------------- Scraper Function --------------------
 def scrape_karkidi_jobs(keywords=["data science"], pages=1):
     headers = {'User-Agent': 'Mozilla/5.0'}
     base_url = "https://www.karkidi.com/Find-Jobs/{page}/all/India?search={query}"
@@ -46,14 +45,12 @@ def scrape_karkidi_jobs(keywords=["data science"], pages=1):
 
     return pd.DataFrame(jobs_list)
 
-# -------------------- Load persisted ML components --------------------
 @st.cache_resource
 def load_models():
     kmeans_model = joblib.load('kmeans_model.pkl')
     vectorizer = joblib.load('vectorizer.pkl')
     return kmeans_model, vectorizer
 
-# -------------------- Classify jobs using model & vectorizer --------------------
 def classify_new_jobs(df, model, vectorizer):
     df = df.copy()
     df["Skills"] = df["Skills"].fillna("").str.lower()
@@ -62,22 +59,20 @@ def classify_new_jobs(df, model, vectorizer):
     df["Cluster"] = model.predict(X)
     return df
 
-# -------------------- Streamlit UI Setup --------------------
 st.set_page_config(page_title="Job Notifier", layout="wide")
-st.title("💼 Job Notifier App (Karkidi.com)")
+st.title("JOB NOTIFIER")
 st.markdown("Automatically cluster and filter new job postings based on your skill preferences.")
 
-# -------------------- Sidebar --------------------
 with st.sidebar:
-    st.header("🎯 Your Preferences")
+    st.header("WHAT ARE YOUR PREFERENCE")
     keyword = st.text_input("Enter job keyword", value="data science")
     pages = st.slider("Pages to scrape", min_value=1, max_value=3, value=1)
     user_clusters = st.multiselect("Select preferred clusters", options=[0, 1, 2, 3, 4], default=[0, 1])
     run_button = st.button("🔍 Fetch & Classify Jobs")
 
-# -------------------- Main Logic --------------------
+
 if run_button:
-    with st.spinner("🔄 Scraping job postings..."):
+    with st.spinner(" Scraping job postings..."):
         jobs_df = scrape_karkidi_jobs(keywords=[keyword], pages=pages)
 
     if jobs_df.empty:
@@ -90,10 +85,10 @@ if run_button:
         matched_df = classified_df[classified_df["Cluster"].isin(user_clusters)]
 
         if not matched_df.empty:
-            st.success(f"🎯 Found {len(matched_df)} jobs in selected clusters!")
+            st.success(f"There are {len(matched_df)} jobs in selected clusters!")
             st.dataframe(matched_df[["Title", "Company", "Location", "Skills", "Cluster"]])
 
             csv = matched_df.to_csv(index=False).encode("utf-8")
-            st.download_button("📥 Download Matching Jobs", data=csv, file_name="matched_jobs.csv", mime="text/csv")
+            st.download_button(" You can download in .csv", data=csv, file_name="matched_jobs.csv", mime="text/csv")
         else:
-            st.info("✅ No jobs matched your selected clusters.")
+            st.info("sorry no jobs matched your cluster")
